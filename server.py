@@ -40,8 +40,7 @@ class ThreadPool:
             request_handler=HTTPRequestHandler(client_socket)
             request_handler.handle_request()
 
-            # 请求处理完毕，关闭对应socket
-            client_socket.close()
+
 
     
     def sumbit_task(self,client_socket):      
@@ -51,7 +50,7 @@ class ThreadPool:
     
 
     def stop(self):
-        # 情空所有task，终止所有线程
+        # 清空所有task，终止所有线程
         with self.lock:
             self.task_queue.queue.clear()
             for _ in range (self.max_connections):
@@ -101,7 +100,7 @@ while True:
         thread_pool.sumbit_task(client_socket)
     except KeyboardInterrupt:
         break
-    except socket.timeput:
+    except socket.timeout:
         print("socket timeout!")
 
 # ---------------------------------------------------------------------------- #
