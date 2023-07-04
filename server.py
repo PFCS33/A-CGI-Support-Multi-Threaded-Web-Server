@@ -1,12 +1,13 @@
 import socket
 import threading
 import queue
+import time
 
 # 导入自定义HTTP处理类
 from HTTPRequestHandler import HTTPRequestHandler
 
 class ThreadPool:
-    def __init__(self, max_connections):
+    def __init__(self, max_connections,logfile):
         # 待处理任务列表
         self.task_queue = queue.Queue()
         # 线程池
@@ -17,6 +18,8 @@ class ThreadPool:
         self.lock= threading.Lock()
         # 初始化线程池
         self.start()
+        # 日志文件路径
+        self.logfile=logfile
 
 
     # 根据 max-connection，初始化线程池
@@ -26,7 +29,7 @@ class ThreadPool:
             work_thread.start()
             self.thread_list.append(work_thread)
 
-    # 核心业务函数
+    # 子线程的核心业务函数
     def worker(self):
         while True:
             # 循环从队列中取出一个任务，并处理
@@ -37,18 +40,15 @@ class ThreadPool:
             
             # HTTP 请求处理
             # 创建一个 HTTPRequestHandler对象，开始处理
-            request_handler=HTTPRequestHandler(client_socket)
+            request_handler=HTTPRequestHandler(client_socket,self.logfile)
             request_handler.handle_request()
 
-
-
-    
+    # 将 socket 放入消息队列
     def sumbit_task(self,client_socket):      
         # 放入新连接(client_socket)到task队列中等待处理
         self.task_queue.put(client_socket)
       
-    
-
+    # 资源释放
     def stop(self):
         # 清空所有task，终止所有线程
         with self.lock:
@@ -69,6 +69,12 @@ while True:
         break
     except ValueError:
         print("无效输入，请再次输入")
+# ---------------------------------------------------------------------------- #
+# 以当前时间生成log_file的路径
+current_time=time.localtime()
+time_str='_'.join([str(current_time.tm_year),str(current_time.tm_mon),str(current_time.tm_mday),str(current_time.tm_hour),str(current_time.tm_min),str(current_time.tm_sec)])
+logfile="log/"+time_str+'.txt'
+
 
 # ---------------------------------------------------------------------------- #
 # 创建TCP套接字
@@ -89,7 +95,7 @@ print("Web server listening on port: {}".format(port))
 
 # ---------------------------------------------------------------------------- #
 # 创建线程池
-thread_pool=ThreadPool(max_connection)
+thread_pool=ThreadPool(max_connection,logfile)
 
 # 开始阻塞监听连接事件
 while True:

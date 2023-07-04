@@ -1,19 +1,26 @@
 import socket
 import os
 import subprocess
+import time
 # 实现 HTTP1.0
 
 class HTTPRequestHandler:
-    def __init__(self, client_socket):
+    def __init__(self, client_socket,logfile):
         # 处理的socket
         self.client_socket = client_socket
         # 超时时间
         self.timeout=10
         # 处理http请求相关信息
+        # 元素为header每一项的列表
         self.msg=None
+        # 状态码
         self.status_code=-1
+        # 文件句柄
         self.file_handle=None
+        # CGI子程序
         self.subproc=None
+        # 日志文件路径
+        self.logfile=logfile
 
     # 释放本次连接的所有相关资源
     def release_resource(self):
@@ -29,8 +36,38 @@ class HTTPRequestHandler:
                 self.client_socket.close()
             except Exception as e:
                 print("socket close error:",e)
+        # CGI子程序
+        if (self.subproc != None and self.subproc.poll() != None):
+            self.subproc.kill()
+            self.subproc = None
         
-    
+    def log_request(self,size):
+        log_content=""
+        # ip
+        log_content+=(self.msg[1].split(':'))[1]
+        log_content+='--'
+        # time
+        current_time=time.localtime()
+        time_str='_'.join([str(current_time.tm_year),str(current_time.tm_mon),str(current_time.tm_mday),str(current_time.tm_hour),str(current_time.tm_min),str(current_time.tm_sec)])
+        log_content+=" ["+time_str+"]"
+        # request_line
+        log_content+= ' "' + self.msg[0]+'"'
+        # state_code
+        log_content+=" "+ str(self.status_code)
+        # file size
+        log_content+=" "+str(size)
+        # referer
+        # user-angency
+        for entry in self.msg:
+            if(entry.split(":")[0]=="Referer"):
+                log_content+=' "'+entry.split(" ")[1]+'"'
+            if(entry.split(':')[0]=="User-Agent"):
+                log_content+=' "'+entry.split(" ")[1]+'"'
+        with open(self.logfile,'a') as file:
+            file.write(log_content)
+            file.write('\n')
+
+
     # 错误对应的响应构造
     def build_error_response(self,isHead=False):
         code=self.status_code
@@ -47,13 +84,17 @@ class HTTPRequestHandler:
         content+=b'\r\n'
         self.client_socket.sendall(content)
 
+        file_size=0
         # response body
         # 发送对应的错误提示页面
         if (not isHead):
+            file_size=os.path.getsize(file_path)
             with open(file_path,'rb') as file:
                 self.file_handle=file
                 for line in file:
                     self.client_socket.sendall(line)
+        # log
+        self.log_request(file_size) 
 
         
 
@@ -68,20 +109,24 @@ class HTTPRequestHandler:
             content= b"HTTP/1.0 200 OK\r\nContent-Type: text/"+suffix+b";charset=utf-8\r\n"
             content+=b'\r\n'
             self.client_socket.sendall(content)
-            # response body~
+            # response body
             with open(file_path,'rb') as file:
                 self.file_handle=file
                 for line in file:
                     #print(line)
                     self.client_socket.sendall(line)
+            # log
+            self.log_request(os.path.getsize(file_path))    
         else:
             self.status_code=404
             self.build_error_response()
+        
 
     def handle_post(self,file_path,args):
         cmd = ['python', file_path, args]
         self.subproc = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         self.subproc.wait()
+        # 检查子进程返回状态
         if(self.subproc.poll()==2):
             self.status_code=403
             self.build_error_response()
@@ -91,6 +136,7 @@ class HTTPRequestHandler:
             content+=b'\r\n'
             content+=self.subproc.stdout.read()
             self.client_socket.sendall(content)
+            self.log_request(os.path.getsize(file_path))
 
 
 
@@ -101,6 +147,7 @@ class HTTPRequestHandler:
             content= b"HTTP/1.0 200 OK\r\nContent-Type: text/html;charset=utf-8\r\n"
             content+=b'\r\n'
             self.client_socket.sendall(content)
+            self.log_request(0) 
         else:
             self.status_code=404
             self.build_error_response(isHead=True)
@@ -164,6 +211,8 @@ class HTTPRequestHandler:
                 raise ValueError("blank request")
         except socket.timeout:
             print('error: process timeout')
+        except KeyboardInterrupt:
+            print("KeyboardInterrupt")
         except ValueError as e:
             print("error: ",str(e))
         finally:
