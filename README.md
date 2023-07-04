@@ -1,18 +1,25 @@
-# ✨A Muti-Threaded CGI-Support HTTP Web Server
+# 	✨A Muti-Threaded CGI-Support HTTP Web Server
 
 ## run
 
-- step1:
+- method1
 
-```python
-python server.py
-```
+  - step1:
 
-- step2:
-  - enter the number of threads in command line
-  - check the TCP listening port of your server
-- step3:
-  - open your favourate browser, and enter the url `localhost:[port]/`
+    ```python
+    python server.py
+    ```
+
+  - step2:		
+    - enter the number of threads in command line
+    - check the TCP listening port of your server
+
+  - step3:
+    - open your favourate browser, and enter the url `localhost:[port]/`
+
+
+- method2
+  - click server.exe
 
 ## functoin
 
