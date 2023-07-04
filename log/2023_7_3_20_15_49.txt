@@ -1,0 +1,4 @@
+ localhost-- [2023_7_3_20_15_54] "GET /index.html HTTP/1.1" 200 3287 "Mozilla/5.0" "http://localhost:8888/dataQuery.html"
+ localhost-- [2023_7_3_20_15_54] "GET /css/style.css HTTP/1.1" 200 1277 "Mozilla/5.0" "http://localhost:8888/index.html"
+ localhost-- [2023_7_3_20_15_55] "GET /css/index.css HTTP/1.1" 200 1005 "Mozilla/5.0" "http://localhost:8888/index.html"
+ localhost-- [2023_7_3_20_15_55] "GET /css/img/background.jpg HTTP/1.1" 200 2330063 "Mozilla/5.0" "http://localhost:8888/css/style.css"
